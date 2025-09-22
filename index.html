@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lazy Fit - ฟิตง่ายๆ แค่ขยับ</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts: TH Sarabun & Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500&family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-green: #2a9d8f;
+            --dark-green: #264653;
+            --light-bg: #f8f9fa;
+            --text-color: #343a40;
+        }
+
+        body {
+            font-family: 'Sarabun', 'Prompt', sans-serif;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .navbar-custom {
+            background-color: var(--primary-green);
+        }
+
+        .btn-custom {
+            background-color: var(--primary-green);
+            border-color: var(--primary-green);
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        .btn-custom:hover {
+            background-color: var(--dark-green);
+            border-color: var(--dark-green);
+            color: white;
+        }
+
+        .btn-logout {
+            background-color: #e76f51;
+            border-color: #e76f51;
+        }
+         .btn-logout:hover {
+            background-color: #f4a261;
+            border-color: #f4a261;
+        }
+
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .auth-container {
+            max-width: 400px;
+            margin: 5rem auto;
+        }
+
+        #app-container {
+            display: none; /* Hidden by default */
+        }
+        
+        .distance-display {
+            font-size: 4.5rem;
+            font-weight: 700;
+            color: var(--dark-green);
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .leaderboard-item:last-child {
+            border-bottom: none;
+        }
+        .leaderboard-rank {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-green);
+            margin-right: 1rem;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-green);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main container for authentication forms -->
+    <div id="auth-container">
+        <div class="container">
+            <!-- Login Form -->
+            <div id="login-view">
+                <div class="card p-4">
+                    <h3 class="text-center mb-4" style="color: var(--dark-green);">เข้าสู่ระบบ Lazy Fit</h3>
+                    <form id="login-form">
+                        <div class="mb-3">
+                            <label for="login-email" class="form-label">อีเมล</label>
+                            <input type="email" class="form-control" id="login-email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="login-password" class="form-label">รหัสผ่าน</label>
+                            <input type="password" class="form-control" id="login-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-custom w-100">เข้าสู่ระบบ</button>
+                    </form>
+                    <p class="text-center mt-3">
+                        ยังไม่มีบัญชี? <a href="#" id="show-signup-link">สมัครสมาชิก</a>
+                    </p>
+                    <div id="login-error" class="text-danger mt-2 text-center"></div>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signup-view" style="display: none;">
+                <div class="card p-4">
+                    <h3 class="text-center mb-4" style="color: var(--dark-green);">สมัครสมาชิก</h3>
+                    <form id="signup-form">
+                        <div class="mb-3">
+                            <label for="signup-email" class="form-label">อีเมล</label>
+                            <input type="email" class="form-control" id="signup-email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="signup-password" class="form-label">รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)</label>
+                            <input type="password" class="form-control" id="signup-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-custom w-100">สมัครสมาชิก</button>
+                    </form>
+                    <p class="text-center mt-3">
+                        มีบัญชีแล้ว? <a href="#" id="show-login-link">เข้าสู่ระบบ</a>
+                    </p>
+                    <div id="signup-error" class="text-danger mt-2 text-center"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container (shown after login) -->
+    <div id="app-container">
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-dark navbar-custom shadow-sm">
+            <div class="container">
+                <a class="navbar-brand" href="#">
+                    💪 Lazy Fit
+                </a>
+                 <div class="d-flex align-items-center">
+                    <span id="user-email-display" class="navbar-text me-3 text-white"></span>
+                    <button id="logout-button" class="btn btn-sm btn-logout">ออกจากระบบ</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mt-4">
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-pills nav-fill mb-4" id="app-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tracking-tab" data-bs-toggle="tab" data-bs-target="#tracking-page" type="button" role="tab">🏃‍♂️ จับระยะทาง</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="leaderboard-tab" data-bs-toggle="tab" data-bs-target="#leaderboard-page" type="button" role="tab">🏆 อันดับ</button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="myTabContent">
+                <!-- Tracking Page -->
+                <div class="tab-pane fade show active" id="tracking-page" role="tabpanel">
+                    <div class="card text-center p-4">
+                        <h4 class="mb-3">ระยะทางปัจจุบัน (กม.)</h4>
+                        <div id="distance-display" class="distance-display">0.000</div>
+                        <p id="gps-status" class="text-muted mt-2">กำลังรอสัญญาณ GPS...</p>
+                        <div class="mt-4">
+                            <button id="start-tracking-btn" class="btn btn-custom btn-lg px-5">เริ่ม</button>
+                            <button id="stop-tracking-btn" class="btn btn-danger btn-lg px-5" style="display: none;">หยุดและบันทึก</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Leaderboard Page -->
+                <div class="tab-pane fade" id="leaderboard-page" role="tabpanel">
+                    <div class="card p-4">
+                        <h4 class="text-center mb-3">ตารางอันดับผู้ใช้งาน</h4>
+                        <div id="leaderboard-list">
+                           <div class="loader"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Import functions from the Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            onAuthStateChanged, 
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getDatabase, 
+            ref, 
+            set, 
+            onValue, 
+            get,
+            query,
+            orderByChild,
+            serverTimestamp,
+            push
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDe-opv4VAN95C42PlZzuUk5al-017558o",
+            authDomain: "lazy-fit-1096a.firebaseapp.com",
+            databaseURL: "https://lazy-fit-1096a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "lazy-fit-1096a",
+            storageBucket: "lazy-fit-1096a.firebasestorage.app",
+            messagingSenderId: "39228283061",
+            appId: "1:39228283061:web:1e53d6745a5da4cfe006fc",
+            measurementId: "G-GRMCD51MCF"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        // --- UI Elements ---
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const loginView = document.getElementById('login-view');
+        const signupView = document.getElementById('signup-view');
+        const showSignupLink = document.getElementById('show-signup-link');
+        const showLoginLink = document.getElementById('show-login-link');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const loginError = document.getElementById('login-error');
+        const signupError = document.getElementById('signup-error');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const logoutButton = document.getElementById('logout-button');
+        
+        // Tracking page elements
+        const distanceDisplay = document.getElementById('distance-display');
+        const gpsStatus = document.getElementById('gps-status');
+        const startTrackingBtn = document.getElementById('start-tracking-btn');
+        const stopTrackingBtn = document.getElementById('stop-tracking-btn');
+
+        // Leaderboard elements
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const leaderboardTab = document.getElementById('leaderboard-tab');
+
+
+        // --- App State ---
+        let currentUser = null;
+        let watchId = null;
+        let totalDistance = 0;
+        let lastPosition = null;
+
+        // --- Authentication ---
+
+        // Listen for auth state changes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
+                currentUser = user;
+                authContainer.style.display = 'none';
+                appContainer.style.display = 'block';
+                userEmailDisplay.textContent = user.email;
+                resetTrackingUI();
+            } else {
+                // User is signed out
+                currentUser = null;
+                authContainer.style.display = 'block';
+                appContainer.style.display = 'none';
+                userEmailDisplay.textContent = '';
+                if(watchId) navigator.geolocation.clearWatch(watchId);
+            }
+        });
+
+        // Toggle between login and signup forms
+        showSignupLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginView.style.display = 'none';
+            signupView.style.display = 'block';
+        });
+
+        showLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginView.style.display = 'block';
+            signupView.style.display = 'none';
+        });
+        
+        // Signup
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            signupError.textContent = '';
+
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    // Create user profile in Realtime Database
+                    const user = userCredential.user;
+                    set(ref(db, 'users/' + user.uid), {
+                        email: user.email,
+                        totalDistance: 0
+                    });
+                })
+                .catch((error) => {
+                    signupError.textContent = 'เกิดข้อผิดพลาด: ' + error.message;
+                });
+        });
+
+        // Login
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            loginError.textContent = '';
+            
+            signInWithEmailAndPassword(auth, email, password)
+                .catch((error) => {
+                    loginError.textContent = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+                });
+        });
+
+        // Logout
+        logoutButton.addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        // --- GPS Tracking ---
+        
+        startTrackingBtn.addEventListener('click', () => {
+             if (!navigator.geolocation) {
+                gpsStatus.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ GPS';
+                return;
+            }
+            
+            resetTrackingState();
+            gpsStatus.textContent = 'กำลังค้นหาสัญญาณ GPS...';
+            startTrackingBtn.style.display = 'none';
+            stopTrackingBtn.style.display = 'inline-block';
+
+            watchId = navigator.geolocation.watchPosition(
+                handlePositionUpdate, 
+                handlePositionError, 
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        });
+
+        stopTrackingBtn.addEventListener('click', async () => {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+
+            if (totalDistance > 0 && currentUser) {
+                gpsStatus.textContent = 'กำลังบันทึกข้อมูล...';
+                try {
+                    const userRef = ref(db, 'users/' + currentUser.uid);
+                    const snapshot = await get(userRef);
+                    const currentTotal = snapshot.val()?.totalDistance || 0;
+                    const newTotal = currentTotal + totalDistance;
+                    
+                    // Update total distance
+                    await set(ref(db, 'users/' + currentUser.uid + '/totalDistance'), newTotal);
+                    
+                    // Save this specific run
+                    const runsRef = ref(db, 'users/' + currentUser.uid + '/runs');
+                    await push(runsRef, {
+                        distance: totalDistance,
+                        timestamp: serverTimestamp()
+                    });
+
+                    gpsStatus.textContent = `บันทึกระยะทาง ${totalDistance.toFixed(3)} กม. เรียบร้อย!`;
+                } catch(error) {
+                    console.error("Error saving data: ", error);
+                    gpsStatus.textContent = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+                }
+            } else {
+                 gpsStatus.textContent = 'ไม่มีระยะทางให้บันทึก';
+            }
+
+            resetTrackingUI();
+        });
+
+        function handlePositionUpdate(position) {
+            gpsStatus.textContent = 'กำลังติดตามการเคลื่อนไหว...';
+            const { latitude, longitude } = position.coords;
+            const currentPosition = { lat: latitude, lng: longitude };
+            
+            if (lastPosition) {
+                const distanceIncrement = haversineDistance(lastPosition, currentPosition);
+                totalDistance += distanceIncrement;
+                distanceDisplay.textContent = totalDistance.toFixed(3);
+            }
+            lastPosition = currentPosition;
+        }
+
+        function handlePositionError(error) {
+            gpsStatus.textContent = `เกิดข้อผิดพลาด: ${error.message}`;
+        }
+        
+        function resetTrackingState() {
+            totalDistance = 0;
+            lastPosition = null;
+            distanceDisplay.textContent = '0.000';
+        }
+        
+        function resetTrackingUI() {
+             startTrackingBtn.style.display = 'inline-block';
+             stopTrackingBtn.style.display = 'none';
+             if (!watchId) {
+                gpsStatus.textContent = 'กด "เริ่ม" เพื่อจับระยะทาง';
+             }
+        }
+        
+        // --- Leaderboard ---
+        leaderboardTab.addEventListener('click', fetchLeaderboard);
+        
+        function fetchLeaderboard() {
+            leaderboardList.innerHTML = '<div class="loader"></div>';
+            const usersRef = ref(db, 'users');
+            const topUsersQuery = query(usersRef, orderByChild('totalDistance'));
+            
+            onValue(topUsersQuery, (snapshot) => {
+                const users = [];
+                snapshot.forEach((childSnapshot) => {
+                    users.push({
+                        email: childSnapshot.val().email,
+                        distance: childSnapshot.val().totalDistance || 0
+                    });
+                });
+                
+                // Sort descending since Firebase sorts ascending
+                const sortedUsers = users.reverse();
+                
+                renderLeaderboard(sortedUsers);
+            }, { onlyOnce: true }); // Use onlyOnce to avoid constant re-rendering while someone is running
+        }
+
+        function renderLeaderboard(users) {
+            leaderboardList.innerHTML = ''; // Clear previous list
+            if (users.length === 0) {
+                leaderboardList.innerHTML = '<p class="text-center text-muted">ยังไม่มีข้อมูลอันดับ</p>';
+                return;
+            }
+            
+            users.forEach((user, index) => {
+                const item = document.createElement('div');
+                item.className = 'leaderboard-item';
+                
+                const rank = index + 1;
+                let rankDisplay = rank;
+                if(rank === 1) rankDisplay = '🥇';
+                if(rank === 2) rankDisplay = '🥈';
+                if(rank === 3) rankDisplay = '🥉';
+
+                item.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <span class="leaderboard-rank">${rankDisplay}</span>
+                        <span>${user.email}</span>
+                    </div>
+                    <span class="fw-bold">${user.distance.toFixed(3)} กม.</span>
+                `;
+                leaderboardList.appendChild(item);
+            });
+        }
+        
+        // --- Helper Functions ---
+
+        /**
+         * Calculates distance between two coordinates in kilometers using Haversine formula.
+         */
+        function haversineDistance(coords1, coords2) {
+            const R = 6371; // Radius of the Earth in km
+            const dLat = (coords2.lat - coords1.lat) * Math.PI / 180;
+            const dLon = (coords2.lng - coords1.lng) * Math.PI / 180;
+            const lat1 = coords1.lat * Math.PI / 180;
+            const lat2 = coords2.lat * Math.PI / 180;
+
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2); 
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+            return R * c;
+        }
+
+    </script>
+
+</body>
+</html>
